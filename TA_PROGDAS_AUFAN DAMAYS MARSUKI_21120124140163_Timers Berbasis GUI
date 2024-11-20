@@ -1,0 +1,119 @@
+import tkinter as tk
+import threading
+import time
+
+
+class TimerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Enhanced Timer")
+        self.root.geometry("400x300")  
+        self.root.configure(bg="#FEFBEA")  
+
+        self.is_running = False
+        self.is_paused = False
+        self.time_left = 0
+        self.history = []
+
+        self.input_frame = tk.Frame(root, bg="#FEFBEA")
+        self.input_frame.pack(pady=20)
+
+        self.control_frame = tk.Frame(root, bg="#FEFBEA")
+        self.control_frame.pack(pady=10)
+
+        self.history_frame = tk.Frame(root, bg="#FEFBEA")
+        self.history_frame.pack(pady=10)
+
+        self.label = tk.Label(self.input_frame, text="Enter time in seconds:", bg="#FEFBEA", font=("Cascadia Code", 12))
+        self.label.pack()
+
+        self.entry = tk.Entry(self.input_frame, font=("Cascadia Code", 14), width=10)
+        self.entry.pack(pady=5)
+
+        self.timer_label = tk.Label(root, text="", font=("Cascadia Code", 40), bg="#FEFBEA")
+        self.timer_label.pack(pady=20)
+
+        self.start_button = tk.Button(self.control_frame, text="Start Timer", command=self.start_timer, bg="#4CAF50", fg="white", width=10)
+        self.start_button.grid(row=0, column=0, padx=5)
+
+        self.stop_button = tk.Button(self.control_frame, text="Stop Timer", command=self.stop_timer, bg="#f44336", fg="white", width=10)
+        self.stop_button.grid(row=0, column=1, padx=5)
+
+        self.resume_button = tk.Button(self.control_frame, text="Resume Timer", command=self.resume_timer, bg="#2196F3", fg="white", width=10)
+        self.resume_button.grid(row=0, column=2, padx=5)
+
+        self.reset_button = tk.Button(self.control_frame, text="Reset Timer", command=self.reset_timer, bg="#FF9800", fg="white", width=10)
+        self.reset_button.grid(row=0, column=3, padx=5)
+
+        self.history_button = tk.Button(self.history_frame, text="Show History", command=self.show_history, bg="#9C27B0", fg="white", width=10)
+        self.history_button.pack()
+
+    def start_timer(self):
+        try:
+            self.time_left = int(self.entry.get())
+            if self.time_left <= 0:
+                raise ValueError("Time must be greater than 0.")
+            self.is_running = True
+            self.is_paused = False
+            threading.Thread(target=self.countdown, daemon=True).start()  
+        except ValueError as e:
+            self.timer_label.config(text=str(e))
+
+    def countdown(self):
+        while self.is_running and self.time_left > 0:
+            if not self.is_paused:
+                mins, secs = divmod(self.time_left, 60)
+                timer_format = f"{mins:02}:{secs:02}"
+                self.timer_label.config(text=timer_format)
+
+                if self.time_left <= 10:
+                    self.timer_label.config(fg="red")
+                else:
+                    self.timer_label.config(fg="black")
+
+                time.sleep(1)  
+                self.time_left -= 1
+
+        if self.is_running and self.time_left == 0:
+            self.timer_label.config(text="Time's up!")
+            self.is_running = False
+            self.history.append("Timer finished.")
+
+    def stop_timer(self):
+        if self.is_running:
+            self.is_paused = True
+            self.history.append(f"Timer stopped at {self.time_left} seconds.")
+
+    def resume_timer(self):
+        if self.is_paused:
+            self.is_paused = False
+
+    def reset_timer(self):
+        self.is_running = False
+        self.is_paused = False
+        self.time_left = 0
+        self.timer_label.config(text="")
+        self.entry.delete(0, tk.END)
+
+    def show_history(self):
+        history_window = tk.Toplevel(self.root)
+        history_window.title("Timer History")
+        history_window.geometry("300x200")
+        history_window.configure(bg="#FEFBEA")
+
+        history_label = tk.Label(history_window, text="Timer History:", bg="#FEFBEA", font=("Cascadia Code", 12, "bold"))
+        history_label.pack(pady=10)
+
+        history_text = "\n".join(self.history) if self.history else "No history available."
+        history_display = tk.Text(history_window, wrap=tk.WORD, height=10, width=35, bg="#fff", font=("Cascadia Code", 10))
+        history_display.insert(tk.END, history_text)
+        history_display.config(state=tk.DISABLED)  
+        history_display.pack(pady=5)
+
+        close_button = tk.Button(history_window, text="Close", command=history_window.destroy, bg="#9C27B0", fg="white")
+        close_button.pack(pady=10)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = TimerApp(root)
+    root.mainloop()
